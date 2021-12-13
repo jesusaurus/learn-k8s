@@ -1,0 +1,37 @@
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: some-service
+  labels:
+    app: fastapp
+spec:
+  type: NodePort
+  ports:
+  - port: 80
+    nodePort: 30080
+  selector:
+    app: fastapp
+
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: my-fastapp
+  labels:
+    app: fastapp
+spec:
+  replicas: 3
+  selector:
+    matchLabels:
+      app: fastapp
+  template:
+    metadata:
+      labels:
+        app: fastapp
+    spec:
+      containers:
+      - name: fastapp
+        image: jesusaur/learn-k8s:latest
+        ports:
+        - containerPort: 80
