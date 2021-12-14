@@ -3,7 +3,7 @@ import random
 import socket
 import time
 
-from fastapi import FastAPI, HTTPException
+from fastapi import BackgroundTasks, FastAPI
 from math import sqrt
 
 
@@ -11,14 +11,7 @@ random.seed()
 app = FastAPI()
 
 
-@app.get("/ok")
-async def health():
-    '''All is well'''
-    return True
-
-
-@app.get("/load")
-async def load():
+def compute():
     '''Computationally expensive task'''
 
     n = 12345
@@ -29,7 +22,17 @@ async def load():
             p = i * j
             if p not in result:
                 result[p] = sqrt(p)
-        logging.info("Still Working")
 
-    k = random.choice(list(result))
-    return {k: result[k]}
+
+@app.get("/ok")
+async def health():
+    '''All is well'''
+    now = time.ctime()
+    return f"Hello World, the current time is {now}"
+
+
+@app.get("/load")
+async def load(bgt: BackgroundTasks):
+    '''Trigger some computation'''
+    bgt.add_task(compute)
+    return {"Work": "Scheduled"}

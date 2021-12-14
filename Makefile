@@ -3,7 +3,7 @@
 .PHONY: status
 
 status:
-	kubectl get pods,services -A
+	kubectl get pods,services,hpa -A
 
 
 # base infrastructure
@@ -11,6 +11,7 @@ status:
 .PHONY: minikube
 
 minikube:
+	minikube addons enable metrics-server
 	minikube start
 
 
@@ -26,6 +27,7 @@ app-test: app-build
 	sleep 3
 	curl localhost:8080/ok
 	curl localhost:8080/load
+	sleep 3
 	docker logs test
 	docker stop test
 	docker rm test
@@ -42,14 +44,29 @@ app: app-build app-publish app-deploy
 
 # zero to sixty
 
-.PHONY: demo
+.PHONY: load demo
 
-demo: minikube app
+load:
+	kubectl get hpa fastapp
+	kubectl run -i --tty load-generator --rm --image=busybox --restart=Never -- /bin/sh -c 'for i in {1..33}; do wget -q -O- http://fastapp/load && sleep 0.1; done'
+	kubectl get hpa fastapp
+	sleep 10
+	kubectl get hpa fastapp
+	sleep 30
+	kubectl get hpa fastapp
+	sleep 30
+	kubectl get hpa fastapp
+
+
+demo: minikube app-deploy load
 
 
 # clean up after ourselves
 
-.PHONY: clean
+.PHONY: clean destroy
 
 clean:
 	kubectl delete -f deploy/app.yaml ||:
+
+destroy: clean
+	minikube delete
