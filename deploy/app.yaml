@@ -1,15 +1,58 @@
 ---
+apiVersion: cert-manager.io/v1
+kind: Certificate
+metadata:
+  name: fastapp-crt
+spec:
+  secretName: fastapp-tls
+  duration: 336h
+  renewBefore: 72h
+  issuerRef:
+    kind: Issuer
+    name: selfsigned-issuer
+  commonName: "test.example.com"
+  isCA: true
+  dnsNames:
+  - "test.example.com"
+
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: fastapp-in
+  labels:
+    app: fastapp-in
+  annotations:
+    cert-manager.io/cluster-issuer: selfsigned-issuer
+    nginx.ingress.kubernetes.io/rewrite-target: /$1
+    nginx.ingress.kubernetes.io/force-ssl-redirect: "true"
+spec:
+  tls:
+    - hosts:
+      - test.example.com
+      secretName: fastapp-tls
+  rules:
+  - host: test.example.com
+    http:
+      paths:
+      - backend:
+          service:
+            name: fastapp-lb
+            port:
+              number: 80
+        path: /(ok|load)
+        pathType: Prefix
+
+---
 apiVersion: v1
 kind: Service
 metadata:
-  name: fastapp
+  name: fastapp-lb
   labels:
-    app: fastapp
+    app: fastapp-lb
 spec:
-  type: NodePort
   ports:
-  - port: 80
-    nodePort: 30080
+    - port: 80
   selector:
     app: fastapp
 
@@ -43,6 +86,7 @@ spec:
           exec:
             command:
               - curl
+              - --fail
               - http://localhost/ok
           initialDelaySeconds: 15
           periodSeconds: 30
@@ -51,7 +95,7 @@ spec:
 apiVersion: autoscaling/v1
 kind: HorizontalPodAutoscaler
 metadata:
-  name: fastapp
+  name: fastapp-hpa
 spec:
   scaleTargetRef:
     apiVersion: apps/v1

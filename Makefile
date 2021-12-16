@@ -3,16 +3,30 @@
 .PHONY: status
 
 status:
-	kubectl get pods,services,hpa -A
+	kubectl get pods,services,hpa,ingress -A
 
 
 # base infrastructure
 
-.PHONY: minikube
+.PHONY: infra check-deps minikube certman
 
-minikube:
-	minikube addons enable metrics-server
+check-deps:
+	./scripts/check-deps.sh
+
+minikube: check-deps
 	minikube start
+	minikube addons enable ingress
+	minikube addons enable ingress-dns
+	minikube addons enable metrics-server
+
+deploy/cert-manager.crds.yaml:
+	wget -O deploy/cert-manager.crds.yaml https://github.com/jetstack/cert-manager/releases/download/v1.6.1/cert-manager.crds.yaml
+
+certman: deploy/cert-manager.crds.yaml
+	kubectl apply -f deploy/cert-manager.crds.yaml
+	kubectl apply -f deploy/selfsigned-issuer.yaml
+
+infra: minikube certman
 
 
 # app lifecycle
@@ -44,21 +58,26 @@ app: app-build app-publish app-deploy
 
 # zero to sixty
 
-.PHONY: load demo
+.PHONY: check-dns set-dns load demo
 
-load:
-	kubectl get hpa fastapp
-	kubectl run -i --tty load-generator --rm --image=busybox --restart=Never -- /bin/sh -c 'for i in {1..33}; do wget -q -O- http://fastapp/load && sleep 0.1; done'
-	kubectl get hpa fastapp
-	sleep 10
-	kubectl get hpa fastapp
+check-dns:
+	./scripts/check-dns.sh
+
+set-dns:
+	./scripts/set-dns.sh
+
+load: check-dns
+	kubectl get hpa fastapp-hpa
+	./scripts/curl-or-wget.sh
 	sleep 30
-	kubectl get hpa fastapp
+	kubectl get hpa fastapp-hpa
 	sleep 30
-	kubectl get hpa fastapp
+	kubectl get hpa fastapp-hpa
+	sleep 30
+	kubectl get hpa fastapp-hpa
 
 
-demo: minikube app-deploy load
+demo: infra set-dns app-deploy load
 
 
 # clean up after ourselves
@@ -69,4 +88,4 @@ clean:
 	kubectl delete -f deploy/app.yaml ||:
 
 destroy: clean
-	minikube delete
+	minikube delete --purge
