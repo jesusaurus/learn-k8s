@@ -114,9 +114,6 @@ Or, more drastically, to tear down minikube itself:
 
 ## TODO
 
-* Parameterize the docker publish account
 * Autoscale on open connection count
-* Split build and deploy into separate projects
-* Create local repository so that the demo is self-contained instead of dependent on docker hub
-  - go from 2-stage (build locally, publish publically) to
-    3-stage (build locally, publish and test locally, publish publically) proceses
+* Encrypt secrets (tls key) at rest
+* Encrypt internal cluster traffic

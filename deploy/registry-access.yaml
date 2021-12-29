@@ -1,0 +1,42 @@
+---
+apiVersion: cert-manager.io/v1
+kind: Certificate
+metadata:
+  name: registry-cert
+spec:
+  secretName: registry-tls
+  duration: 336h
+  renewBefore: 72h
+  issuerRef:
+    kind: Issuer
+    name: selfsigned-issuer
+  commonName: "registry.example.com"
+  isCA: true
+  dnsNames:
+  - "registry.example.com"
+
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  namespace: kube-system
+  name: registry-in
+  labels:
+    app: registry
+  annotations:
+    cert-manager.io/cluster-issuer: selfsigned-issuer
+    nginx.ingress.kubernetes.io/rewrite-target: /$1
+    nginx.ingress.kubernetes.io/force-ssl-redirect: "true"
+    nginx.ingress.kubernetes.io/proxy-body-size: "0"
+    nginx.ingress.kubernetes.io/proxy-read-timeout: "600"
+    nginx.ingress.kubernetes.io/proxy-send-timeout: "600"
+spec:
+  tls:
+    - hosts:
+      - registry.example.com
+      secretName: registry-in
+  defaultBackend:
+    service:
+      name: registry
+      port:
+        number: 80

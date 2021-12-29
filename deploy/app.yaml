@@ -2,7 +2,7 @@
 apiVersion: cert-manager.io/v1
 kind: Certificate
 metadata:
-  name: fastapp-crt
+  name: fastapp-cert
 spec:
   secretName: fastapp-tls
   duration: 336h
@@ -42,7 +42,6 @@ spec:
               number: 80
         path: /(ok|load)
         pathType: Prefix
-
 ---
 apiVersion: v1
 kind: Service
@@ -75,7 +74,7 @@ spec:
     spec:
       containers:
       - name: fastapp
-        image: jesusaur/learn-k8s:latest
+        image: registry.minikube/learn-k8s:latest
         imagePullPolicy: Always
         ports:
         - containerPort: 80

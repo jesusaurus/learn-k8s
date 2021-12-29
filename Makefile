@@ -3,6 +3,7 @@
 .PHONY: status
 
 status:
+	docker ps -a
 	kubectl get pods,services,hpa,ingress -A
 
 
@@ -14,10 +15,12 @@ check-deps:
 	./scripts/check-deps.sh
 
 minikube: check-deps
-	minikube start
+	minikube start --insecure-registry "10.0.0.0/24"
 	minikube addons enable ingress
 	minikube addons enable ingress-dns
 	minikube addons enable metrics-server
+	minikube addons enable registry
+	minikube addons enable registry-aliases
 
 deploy/cert-manager.crds.yaml:
 	wget -O deploy/cert-manager.crds.yaml https://github.com/jetstack/cert-manager/releases/download/v1.6.1/cert-manager.crds.yaml
@@ -26,7 +29,10 @@ certman: deploy/cert-manager.crds.yaml
 	kubectl apply -f deploy/cert-manager.crds.yaml
 	kubectl apply -f deploy/selfsigned-issuer.yaml
 
-infra: minikube certman
+registry:
+	kubectl apply -f deploy/registry-access.yaml
+
+infra: minikube certman registry
 
 
 # app lifecycle
@@ -47,8 +53,8 @@ app-test: app-build
 	docker rm test
 
 app-publish:
-	docker tag test-app:test jesusaur/learn-k8s:latest
-	docker push jesusaur/learn-k8s:latest
+	docker tag test-app:test registry.example.com/learn-k8s:latest
+	docker push registry.example.com/learn-k8s:latest
 
 app-deploy:
 	kubectl apply -f deploy/app.yaml
@@ -61,10 +67,10 @@ app: app-build app-publish app-deploy
 .PHONY: check-dns set-dns load demo
 
 check-dns:
-	./scripts/check-dns.sh
+	./scripts/dns.sh check
 
 set-dns:
-	./scripts/set-dns.sh
+	./scripts/dns.sh set
 
 load: check-dns
 	kubectl get hpa fastapp-hpa
@@ -77,7 +83,7 @@ load: check-dns
 	kubectl get hpa fastapp-hpa
 
 
-demo: infra set-dns app-deploy load
+demo: infra set-dns app load
 
 
 # clean up after ourselves
@@ -86,6 +92,9 @@ demo: infra set-dns app-deploy load
 
 clean:
 	kubectl delete -f deploy/app.yaml ||:
+
+delete: clean
+	minikube delete
 
 destroy: clean
 	minikube delete --purge
