@@ -10,10 +10,6 @@ The following system dependencies must be installed:
 * Minikube binary
 * Either curl or wget
 
-In order to publish images to Docker Hub (a subcommand of `make app`),
-you must be logged in to Docker Hub with an account that can publish
-images to the `jesusaur` account.
-
 
 ## Quickstart
 
@@ -58,32 +54,25 @@ To confirm that the host resolution works:
 
 ### Build an App Image
 
-Building an application image is not necessary, and publishing a built image
-requires `jesusaur` credentials to Docker Hub:
-```
-    docker login
-```
-
 To build a docker image locally for the test application, run
 ```
     make app-build
 ```
 This will create a local image tagged as `test-app:test`.
 
-To build an image and test locally with `docker-run`:
+To to also load-test the image with `docker-run`:
 ```
     make app-test
 ```
 
-If you are logged in with sufficient credentials, you can upload the
-`test` tag as the new `latest` tag with:
+And, to publish the image to minikube\'s registry:
 ```
     make app-publish
 ```
 
 ### Deploy an App Image
 
-To deploy the latest app image to our local minikube:
+To deploy the latest app image to minikube:
 ```
     make app-deploy
 ```

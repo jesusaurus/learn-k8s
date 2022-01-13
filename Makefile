@@ -88,7 +88,7 @@ demo: infra set-dns app load
 
 # clean up after ourselves
 
-.PHONY: clean destroy
+.PHONY: clean delete destroy
 
 clean:
 	kubectl delete -f deploy/app.yaml ||:
